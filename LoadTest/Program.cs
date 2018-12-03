@@ -8,7 +8,7 @@ namespace LoadTest
 {
 	class Program
 	{
-		private static int _count = 20;
+		private static int _count = 50;
 
 		static void Main(string[] args)
 		{
@@ -48,38 +48,46 @@ namespace LoadTest
 						break;
 				}
 
-				if (port != 0)
+				if (port == 0)
 				{
-					var tasks = new List<Task>();
-					var baseUri = $"http://localhost:{port}/api/values/";
-					Console.WriteLine($"Sending {_count} requests to: {baseUri}");
-
-					var sw = Stopwatch.StartNew();
-
-					for (var i = 0; i < _count; i++)
-					{
-						var j = i;
-						var uri = $"{baseUri}{j}";
-
-						Console.WriteLine($"{j.ToString().PadLeft(5)}: Request: [{uri}]");
-
-						tasks.Add(
-							uri.AllowAnyHttpStatus()
-								.GetAsync()
-								.ContinueWith(m =>
-								{
-									Console.WriteLine(
-										$"[{DateTime.Now.TimeOfDay.Milliseconds}] {j.ToString().PadLeft(5)}: {m.Result.StatusCode.ToString()}");
-								})
-						);
-					}
-
-					Task.WaitAll(tasks.ToArray());
-					sw.Stop();
-					Console.WriteLine($"Run completed: [{sw.ElapsedMilliseconds}ms]");
-
-					Console.WriteLine();
+					continue;
 				}
+
+				Console.Clear();
+
+				var tasks = new List<Task>();
+				var baseUri = $"http://localhost:{port}/api/values/";
+				Console.WriteLine($"Sending {_count} requests to: {baseUri}");
+
+				var sw = Stopwatch.StartNew();
+
+				for (var i = 0; i < _count; i++)
+				{
+					var j = i;
+					var uri = $"{baseUri}{j}";
+
+					Console.WriteLine($"{j.ToString().PadLeft(5)}: Request: [{uri}]");
+
+					tasks.Add(
+						uri.AllowAnyHttpStatus()
+							//.WithTimeout(10)
+							.GetAsync()
+							.ContinueWith(m =>
+							{
+								Console.WriteLine(
+									m.IsCompletedSuccessfully
+										? $"[{DateTime.Now.TimeOfDay.Milliseconds}] {j.ToString().PadLeft(5)}: {m.Result.StatusCode.ToString()}"
+										: $"[{DateTime.Now.TimeOfDay.Milliseconds}] {j.ToString().PadLeft(5)}: {m.Exception.InnerException.Message}");
+							})
+					);
+				}
+
+				Task.WaitAll(tasks.ToArray());
+				sw.Stop();
+				Console.WriteLine($"Run completed: [{sw.ElapsedMilliseconds}ms]");
+				Console.WriteLine("Press any key to run again...");
+				Console.ReadKey();
+				Console.Clear();
 			}
 
 		}
