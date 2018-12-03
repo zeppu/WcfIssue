@@ -12,15 +12,28 @@ namespace LoadTest
 
 		static void Main(string[] args)
 		{
+			var firstRun = true;
+
 			while (true)
 			{
 				Console.WriteLine("1: Load test .NET Core");
 				Console.WriteLine("2: Load test .NET Framework");
+				Console.WriteLine("3: [Async] Load test .NET Core");
+				Console.WriteLine("4: [Async] Load test .NET Framework");
 				Console.WriteLine("c:xxx: Set count (eg: c:1000)");
 				Console.WriteLine("x: Exit");
 				Console.WriteLine("Make your selection");
 
 				var value = Console.ReadLine();
+
+				if (firstRun)
+				{
+					// Warm up
+					Task.WaitAll(
+						"http://localhost:5000/api/values/".GetAsync(),
+						"http://localhost:5001/api/values/".GetAsync());
+					firstRun = false;
+				}
 
 				if (value.Equals("x"))
 					break;
@@ -35,6 +48,7 @@ namespace LoadTest
 				int.TryParse(value, out var selection);
 
 				int port;
+				string action = String.Empty;
 				switch (selection)
 				{
 					case 1:
@@ -42,6 +56,14 @@ namespace LoadTest
 						break;
 					case 2:
 						port = 5001;
+						break;
+					case 3:
+						port = 5000;
+						action = "async/";
+						break;
+					case 4:
+						port = 5001;
+						action = "async/";
 						break;
 					default:
 						port = 0;
@@ -56,28 +78,29 @@ namespace LoadTest
 				Console.Clear();
 
 				var tasks = new List<Task>();
-				var baseUri = $"http://localhost:{port}/api/values/";
+				var baseUri = $"http://localhost:{port}/api/values/{action}";
 				Console.WriteLine($"Sending {_count} requests to: {baseUri}");
 
 				var sw = Stopwatch.StartNew();
 
 				for (var i = 0; i < _count; i++)
 				{
-					var j = i;
+					var j = i+1;
 					var uri = $"{baseUri}{j}";
 
 					Console.WriteLine($"{j.ToString().PadLeft(5)}: Request: [{uri}]");
-
+					var swLocal = Stopwatch.StartNew();
 					tasks.Add(
 						uri.AllowAnyHttpStatus()
 							//.WithTimeout(10)
 							.GetAsync()
 							.ContinueWith(m =>
 							{
+								swLocal.Stop();
 								Console.WriteLine(
 									m.IsCompletedSuccessfully
-										? $"[{DateTime.Now.TimeOfDay.Milliseconds}] {j.ToString().PadLeft(5)}: {m.Result.StatusCode.ToString()}"
-										: $"[{DateTime.Now.TimeOfDay.Milliseconds}] {j.ToString().PadLeft(5)}: {m.Exception.InnerException.Message}");
+										? $"[{sw.ElapsedMilliseconds}ms] {j.ToString().PadLeft(5)}: {m.Result.StatusCode.ToString()}"
+										: $"[{sw.ElapsedMilliseconds}ms] {j.ToString().PadLeft(5)}: {m.Exception.InnerException.Message}");
 							})
 					);
 				}

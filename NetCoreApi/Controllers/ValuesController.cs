@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using System.Threading.Tasks;
 
 namespace NetCoreApi.Controllers
 {
@@ -24,6 +25,12 @@ namespace NetCoreApi.Controllers
 		public ActionResult<string> Get(string value)
 		{
 			return _service.GetData(value);
+		}
+
+		[HttpGet("async/{value}")]
+		public async Task<ActionResult<string>> GetAsync(string value)
+		{
+			return await _service.GetDataAsync(value);
 		}
 	}
 }
