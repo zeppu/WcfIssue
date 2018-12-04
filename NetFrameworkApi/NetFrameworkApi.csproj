@@ -3,6 +3,9 @@
   <PropertyGroup>
     <TargetFramework>net461</TargetFramework>
   </PropertyGroup>
+    <PropertyGroup>
+    <ActiveDebugProfile>NetFrameworkApi</ActiveDebugProfile>
+  </PropertyGroup>
 
   <ItemGroup>
     <Folder Include="wwwroot\" />
